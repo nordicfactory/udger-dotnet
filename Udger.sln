@@ -1,45 +1,43 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26403.3
+VisualStudioVersion = 15.0.26730.16
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{F7A0F21B-3FA1-4B99-8F46-E94A70608938}"
-	ProjectSection(SolutionItems) = preProject
-		LICENSE = LICENSE
-		README.md = README.md
-	EndProjectSection
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Udger.Parser.V3", "Udger.Parser.V3\Udger.Parser.V3.csproj", "{CD6E72D6-F7AD-44FB-AD43-A4182E90456D}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "v3", "v3", "{17E8DA73-2A10-44BC-8C29-A672F5735D11}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UdgerConsoleTest", "UdgerConsoleTest\UdgerConsoleTest.csproj", "{F2F354C6-7A2C-4CDD-A692-DD1920D5EF36}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Udger.Parser.V3", "Udger.Parser.V3\Udger.Parser.V3.csproj", "{8BC9FF6A-51CE-4C45-8CB3-6C3B03CB890B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UdgerDataTest", "UdgerDataTest\UdgerDataTest.csproj", "{FE8C51AD-6642-452A-ABDF-FDE182B79B9A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UdgerSpeedTest", "UdgerSpeedTest\UdgerSpeedTest.csproj", "{44CF7249-836F-4B72-A06D-0517397D2D22}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
-		Debug|Mixed Platforms = Debug|Mixed Platforms
-		Debug|x86 = Debug|x86
 		Release|Any CPU = Release|Any CPU
-		Release|Mixed Platforms = Release|Mixed Platforms
-		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{8BC9FF6A-51CE-4C45-8CB3-6C3B03CB890B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8BC9FF6A-51CE-4C45-8CB3-6C3B03CB890B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8BC9FF6A-51CE-4C45-8CB3-6C3B03CB890B}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{8BC9FF6A-51CE-4C45-8CB3-6C3B03CB890B}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{8BC9FF6A-51CE-4C45-8CB3-6C3B03CB890B}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{8BC9FF6A-51CE-4C45-8CB3-6C3B03CB890B}.Debug|x86.Build.0 = Debug|Any CPU
-		{8BC9FF6A-51CE-4C45-8CB3-6C3B03CB890B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8BC9FF6A-51CE-4C45-8CB3-6C3B03CB890B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8BC9FF6A-51CE-4C45-8CB3-6C3B03CB890B}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{8BC9FF6A-51CE-4C45-8CB3-6C3B03CB890B}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{8BC9FF6A-51CE-4C45-8CB3-6C3B03CB890B}.Release|x86.ActiveCfg = Release|Any CPU
-		{8BC9FF6A-51CE-4C45-8CB3-6C3B03CB890B}.Release|x86.Build.0 = Release|Any CPU
+		{CD6E72D6-F7AD-44FB-AD43-A4182E90456D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CD6E72D6-F7AD-44FB-AD43-A4182E90456D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CD6E72D6-F7AD-44FB-AD43-A4182E90456D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CD6E72D6-F7AD-44FB-AD43-A4182E90456D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F2F354C6-7A2C-4CDD-A692-DD1920D5EF36}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F2F354C6-7A2C-4CDD-A692-DD1920D5EF36}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F2F354C6-7A2C-4CDD-A692-DD1920D5EF36}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F2F354C6-7A2C-4CDD-A692-DD1920D5EF36}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE8C51AD-6642-452A-ABDF-FDE182B79B9A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE8C51AD-6642-452A-ABDF-FDE182B79B9A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE8C51AD-6642-452A-ABDF-FDE182B79B9A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE8C51AD-6642-452A-ABDF-FDE182B79B9A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{44CF7249-836F-4B72-A06D-0517397D2D22}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{44CF7249-836F-4B72-A06D-0517397D2D22}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{44CF7249-836F-4B72-A06D-0517397D2D22}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{44CF7249-836F-4B72-A06D-0517397D2D22}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{8BC9FF6A-51CE-4C45-8CB3-6C3B03CB890B} = {17E8DA73-2A10-44BC-8C29-A672F5735D11}
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2CBD5FA8-5307-46C1-B3CB-79E60542CD78}
 	EndGlobalSection
 EndGlobal

@@ -1,12 +1,9 @@
-﻿// <copyright file="UdgerSqlQuery.cs" company="Udger s.r.o.">
-// Copyright (c) Udger s.r.o.. All rights reserved.
-// </copyright>
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
 
 namespace Udger.Parser.V3
 {
-    /// <summary>
-    /// Class for the SQL query constants.
-    /// </summary>
     internal class UdgerSqlQuery
     {
         /// <summary>
@@ -41,20 +38,19 @@ FROM
 LEFT JOIN
     udger_crawler_class ON udger_crawler_class.id = udger_crawler_list.class_id
 WHERE
-    ua_string = ?";
+    ua_string = @0";
 
         /// <summary>
         /// Query for clients.
         /// </summary>
         public const string SqlClient = @"
         SELECT
-            ur.rowid,
             client_id AS client_id,
             class_id AS class_id,
             client_classification AS ua_class,
             client_classification_code AS ua_class_code,
             name AS ua,
-            ngine AS ua_engine,
+            engine AS ua_engine,
             NULL AS ua_version,
             NULL AS ua_version_major,
             NULL AS crawler_last_seen,
@@ -78,7 +74,7 @@ WHERE
         JOIN
             udger_client_class ON udger_client_class.id = udger_client_list.class_id
         WHERE
-            ur.rowid=?
+            ur.rowid=@0
 ";
 
         /// <summary>
@@ -103,14 +99,13 @@ WHERE
         /// </summary>
         public static readonly string SqLOs = $@"
         SELECT
-            ur.rowid,
             {OsColumns}
         FROM
             udger_os_regex ur
         JOIN
             udger_os_list ON udger_os_list.id = ur.os_id
         WHERE
-            ur.rowid=?
+            ur.rowid=@0
 ";
 
         /// <summary>
@@ -123,8 +118,8 @@ WHERE
             udger_client_os_relation
         JOIN
             udger_os_list ON udger_os_list.id = udger_client_os_relation.os_id
-        HERE
-            client_id = ?
+        WHERE
+            client_id = @0
 ";
 
         /// <summary>
@@ -150,7 +145,7 @@ WHERE
         JOIN
             udger_deviceclass_list ON udger_deviceclass_list.id = ur.deviceclass_id
         WHERE
-            ur.rowid=?
+            ur.rowid=@0
 ";
 
         /// <summary>
@@ -164,7 +159,7 @@ WHERE
         JOIN
             udger_client_class ON udger_client_class.deviceclass_id = udger_deviceclass_list.id
         WHERE
-            udger_client_class.id = ?
+            udger_client_class.id = @0
 ";
 
         /// <summary>
@@ -210,7 +205,7 @@ WHERE
         LEFT JOIN
             udger_crawler_class ON udger_crawler_class.id=udger_crawler_list.class_id
         WHERE
-            ip = ?
+            ip = @0
         ORDER BY
             sequence
 ";
@@ -221,21 +216,22 @@ WHERE
         public const string DatacenterColumns = @"
         name AS datacenter_name,
         name_code AS datacenter_name_code,
-        homepage AS datacenter_homepage
+        homepage AS datacenter_homepage        
 ";
 
         /// <summary>
         /// Query for data center.
         /// </summary>
-        public static readonly string SqlDatacenter = $@"
+        public static readonly string SqlDatacenterList = $@"
         SELECT
+            iplong_from AS iplong_from,
+            iplong_to AS iplong_to,
             {DatacenterColumns}
         FROM
             udger_datacenter_range
         JOIN
             udger_datacenter_list ON udger_datacenter_range.datacenter_id = udger_datacenter_list.id
-        WHERE
-            iplong_from <= ? AND iplong_to >= ?
+        ORDER BY iplong_from
 ";
 
         /// <summary>
@@ -249,14 +245,14 @@ WHERE
         JOIN
             udger_datacenter_list ON udger_datacenter_range6.datacenter_id=udger_datacenter_list.id
         WHERE
-            iplong_from0 <= ? AND iplong_to0 >= ? AND
-            iplong_from1 <= ? AND iplong_to1 >= ? AND
-            iplong_from2 <= ? AND iplong_to2 >= ? AND
-            iplong_from3 <= ? AND iplong_to3 >= ? AND
-            iplong_from4 <= ? AND iplong_to4 >= ? AND
-            iplong_from5 <= ? AND iplong_to5 >= ? AND
-            iplong_from6 <= ? AND iplong_to6 >= ? AND
-            iplong_from7 <= ? AND iplong_to7 >=?
+            iplong_from0 <= @0 AND iplong_to0 >= @1 AND
+            iplong_from1 <= @2 AND iplong_to1 >= @3 AND
+            iplong_from2 <= @4 AND iplong_to2 >= @5 AND
+            iplong_from3 <= @6 AND iplong_to3 >= @7 AND
+            iplong_from4 <= @8 AND iplong_to4 >= @9 AND
+            iplong_from5 <= @10 AND iplong_to5 >= @11 AND
+            iplong_from6 <= @12 AND iplong_to6 >= @13 AND
+            iplong_from7 <= @14 AND iplong_to7 >= @15
 ";
 
         /// <summary>
@@ -269,7 +265,7 @@ WHERE
         FROM
             udger_devicename_regex
         WHERE
-            os_family_code=? AND (os_code='-all-' OR os_code=?)
+            os_family_code=@0 AND (os_code='-all-' OR os_code=@1)
         ORDER BY sequence
 ";
 
@@ -289,7 +285,7 @@ WHERE
         JOIN
             udger_devicename_brand ON udger_devicename_brand.id=udger_devicename_list.brand_id
         WHERE
-            regex_id = ? AND code = ?
+            regex_id = @0 AND code = @1
 ";
     }
 }

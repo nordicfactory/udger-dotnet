@@ -1,98 +1,83 @@
-﻿// <copyright file="WordDetector.cs" company="Udger s.r.o.">
-// Copyright (c) Udger s.r.o.. All rights reserved.
-// </copyright>
+﻿using System;
+using System.Collections.Generic;
 
 namespace Udger.Parser.V3
 {
-    using System.Collections.Generic;
-
-    using Udger.Parser.V3.Models;
-
-    /// <summary>
-    /// Implementation of word detector inside the string.
-    /// </summary>
-    internal class WordDetector
+    public class WordDetector
     {
-        private const long SerialVersionUID = -2123898245391386812L;
+        private struct WordInfo
+        {
+            public int Id { get; }
+            public string Word { get; }
 
-        private readonly int arrayDimension;
-        private readonly int arraySize;
-        private List<WordInfo>[] wordArray;
-        private int minimumWordSize = int.MaxValue;
+            public WordInfo(int id, string word)
+            {
+                Id = id;
+                Word = word;
+            }
+        }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="WordDetector"/> class.
-        /// </summary>
+        private static readonly int ArrayDimension = 'z' - 'a';
+        private static readonly int ArraySize = (ArrayDimension + 1) * (ArrayDimension + 1);
+
+        private readonly List<WordInfo>[] _wordArray;
+        private int _minWordSize = int.MaxValue;
+
         public WordDetector()
         {
-            this.arrayDimension = 'z' - 'a';
-            this.arraySize = this.arrayDimension * this.arrayDimension;
-            this.wordArray = new List<WordInfo>[this.arraySize];
+            _wordArray = new List<WordInfo>[ArraySize];
         }
 
-        /// <summary>
-        /// Adds word to the internal collection.
-        /// </summary>
-        /// <param name="id">Id of word.</param>
-        /// <param name="word">Word itself.</param>
         public void AddWord(int id, string word)
         {
-            if (word.Length < this.minimumWordSize)
+
+            if (word.Length < _minWordSize)
             {
-                this.minimumWordSize = word.Length;
+                _minWordSize = word.Length;
             }
 
-            string lowerCaseWord = word.ToLower();
-            int index = ((lowerCaseWord[0] - 'a') * this.arrayDimension) + (lowerCaseWord[1] - 'a');
-            if ((index >= 0) && (index < this.arraySize))
-            {
-                List<WordInfo> wordList = this.wordArray[index];
-                if (wordList != null)
-                {
-                    wordList = new List<WordInfo>();
-                    this.wordArray[index] = wordList;
-                }
+            var s = word.ToLower();
+            var index = (s[0] - 'a') * ArrayDimension + s[1] - 'a';
 
-                wordList.Add(new WordInfo(id, word));
-            }
-            else
+            if (index < 0 || index >= ArraySize) return;
+
+            var wList = _wordArray[index];
+            if (wList == null)
             {
-                // should be logged or ignored at all?
+                wList = new List<WordInfo>();
+                _wordArray[index] = wList;
             }
+            wList.Add(new WordInfo(id, s));
         }
 
-        /// <summary>
-        /// Find words in existing lists.
-        /// </summary>
-        /// <param name="text">Text to look for.</param>
-        /// <returns>Returns list of matched words.</returns>
         public HashSet<int> FindWords(string text)
         {
-            var result = new HashSet<int>();
-            string lowerCaseText = text.ToLower();
-            int dimension = 'z' - 'a';
-            for (int i = 0; i < lowerCaseText.Length - (this.minimumWordSize - 1); i++)
+
+            var ret = new HashSet<int>();
+
+            var s = text.ToLower();
+            const int dimension = 'z' - 'a';
+            for (var i = 0; i < s.Length - (_minWordSize - 1); i++)
             {
-                char letter1 = lowerCaseText[i];
-                char letter2 = lowerCaseText[i + 1];
-                if (((letter1 >= 'a') && (letter1 <= 'z')) && ((letter2 >= 'a') && (letter2 <= 'z')))
+                var c1 = s[i];
+                var c2 = s[i + 1];
+                if (c1 < 'a' || c1 > 'z' || c2 < 'a' || c2 > 'z') continue;
+
+                var index = (c1 - 'a') * dimension + c2 - 'a';
+                var l = _wordArray[index];
+
+                if (l == null) continue;
+
+                foreach (var wi in l)
                 {
-                    int index = ((letter1 - 'a') * dimension) + (letter2 - 'a');
-                    var wordList = this.wordArray[index];
-                    if (wordList != null)
+                    if (s.Substring(i).StartsWith(wi.Word))
                     {
-                        foreach (var wordInfo in wordList)
-                        {
-                            if (lowerCaseText.StartsWith(wordInfo.Word))
-                            {
-                                result.Add(wordInfo.Id);
-                            }
-                        }
+                        ret.Add(wi.Id);
                     }
                 }
             }
-
-            return result;
+            return ret;
         }
+
     }
 }
