@@ -1,11 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 
 namespace Udger.Parser.V3
 {
+    /// <summary>
+    /// This class is thread safe.
+    /// </summary>
     public class WordDetector
     {
-        private struct WordInfo
+        public struct WordInfo
         {
             public int Id { get; }
             public string Word { get; }
@@ -20,15 +24,23 @@ namespace Udger.Parser.V3
         private static readonly int ArrayDimension = 'z' - 'a';
         private static readonly int ArraySize = (ArrayDimension + 1) * (ArrayDimension + 1);
 
-        private readonly List<WordInfo>[] _wordArray;
+        private readonly ImmutableArray<ImmutableList<WordInfo>> _wordArray;
         private int _minWordSize = int.MaxValue;
 
-        public WordDetector()
+        public WordDetector(IEnumerable<WordInfo> wordInfos)
         {
-            _wordArray = new List<WordInfo>[ArraySize];
+            var wordArray = new List<WordInfo>[ArraySize];
+
+            foreach (var wordInfo in wordInfos)
+            {
+                AddWord(wordArray, wordInfo.Id, wordInfo.Word);
+            }
+            var w = wordArray.Select(a => a == null? ImmutableList<WordInfo>.Empty: a.ToImmutableList()).ToImmutableArray();
+
+            _wordArray = w;
         }
 
-        public void AddWord(int id, string word)
+        private void AddWord(List<WordInfo>[] wordArray, int id, string word)
         {
 
             if (word.Length < _minWordSize)
@@ -41,11 +53,11 @@ namespace Udger.Parser.V3
 
             if (index < 0 || index >= ArraySize) return;
 
-            var wList = _wordArray[index];
+            var wList = wordArray[index];
             if (wList == null)
             {
                 wList = new List<WordInfo>();
-                _wordArray[index] = wList;
+                wordArray[index] = wList;
             }
             wList.Add(new WordInfo(id, s));
         }

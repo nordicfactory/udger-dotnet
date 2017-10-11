@@ -10,6 +10,8 @@ namespace Udger.Parser.V3
     /// Copied from https://github.com/tejacques/LRUCache/blob/master/src/LRUCache/LRUCache.cs
     /// The original source was licensed under the Apache License 2.0.
     /// Its copied here instead of using the nuget since its a single file and the project hasn't been updated since its creation on Github.
+    /// 
+    /// This class is thread safe.
     /// </summary>
     /// <typeparam name="TK">The key type.</typeparam>
     /// <typeparam name="TV">The value type.</typeparam>

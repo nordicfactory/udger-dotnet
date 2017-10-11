@@ -97,7 +97,7 @@ WHERE
         /// <summary>
         /// Query of operating system.
         /// </summary>
-        public static readonly string SqLOs = $@"
+        public static readonly string SqlOs = $@"
         SELECT
             {OsColumns}
         FROM
@@ -111,7 +111,7 @@ WHERE
         /// <summary>
         /// Query for client operating system.
         /// </summary>
-        public static readonly string SqlCLientOs = $@"
+        public static readonly string SqlClientOs = $@"
         SELECT
             {OsColumns}
         FROM
