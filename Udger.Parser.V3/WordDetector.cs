@@ -7,7 +7,7 @@ namespace Udger.Parser.V3
     /// <summary>
     /// This class is thread safe.
     /// </summary>
-    public class WordDetector
+    internal class WordDetector
     {
         public struct WordInfo
         {

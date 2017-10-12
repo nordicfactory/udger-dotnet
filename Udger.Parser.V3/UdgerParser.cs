@@ -4,10 +4,12 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using Microsoft.Data.Sqlite;
+using Udger.Parser.V3.DbModels;
 
 namespace Udger.Parser.V3
 {
@@ -29,15 +31,24 @@ namespace Udger.Parser.V3
         private WordDetector _clientWordDetector;
         private WordDetector _osWordDetector;
         private ImmutableList<DatacenterRange> _datacenterRangeList;
+        private ConcurrentDictionary<int, Os> _rowIdOsDictionary;
+        private ConcurrentDictionary<int, Os> _clientIdOsDictionary;
+        private ConcurrentDictionary<int, Device> _rowIdDeviceDictionary;
+        private ConcurrentDictionary<int, Device> _classIdDeviceDictionary;
+        private ConcurrentDictionary<string, Ua> _uaStringUaDictionary;
+        private ConcurrentDictionary<int, Ua> _rowIdUaDictionary;
+        private ImmutableList<DeviceRegex> _osDeviceRegexList;
+        private ConcurrentDictionary<Tuple<string, string>, DeviceBrand> _regexDeviceBrandDictionary; // <regexid,code>
+
         private readonly LRUCache<string, UaResult> _cache;
+
 
         private readonly string ID_CRAWLER = "crawler";
         private readonly Regex _ipv6NormalizeRegex = new Regex("((?:(?:^|:)0+\\b){2,}):?(?!\\S*\\b\\1:0+\\b)(\\S*)", RegexOptions.Compiled);
         private readonly ConcurrentDictionary<string, Regex> _regexCache = new ConcurrentDictionary<string, Regex>();
-        //private readonly ConcurrentDictionary<string, DbCommand> _preparedStmtMap = new ConcurrentDictionary<string, DbCommand>();
         private readonly Regex PAT_UNPERLIZE = new Regex(@"^/?(.*)/([si]*)\s*$", RegexOptions.Compiled);
 
-        readonly Comparer<DatacenterRange> _datacenterRangeIpFromComparer = Comparer<DatacenterRange>.Create((a, b) =>
+        private readonly Comparer<DatacenterRange> _datacenterRangeIpFromComparer = Comparer<DatacenterRange>.Create((a, b) =>
             a == null && b == null ? 0 :
                 (a == null ? -1 :
                     (b == null ? 1 :
@@ -56,14 +67,14 @@ namespace Udger.Parser.V3
         /// </summary>
         /// <param name="dbFilePath"></param>
         /// <param name="cacheCapacity"></param>
-        /// <param name="inMemory"></param>
-        public UdgerParser(string dbFilePath = "udgerdb_v3.dat", int cacheCapacity = 10000, bool inMemory = false)
+        public UdgerParser(string dbFilePath = "udgerdb_v3.dat", int cacheCapacity = 10000)
         {
             _dbFilePath = dbFilePath;
             if (cacheCapacity > 0)
             {
                 _cache = new LRUCache<string, UaResult>(cacheCapacity);
             }
+            Prepare();
         }
 
         public UaResult ParseUa(string uaString)
@@ -76,7 +87,7 @@ namespace Udger.Parser.V3
 
             var ret = new UaResult(uaString);
 
-            Prepare();
+            //Prepare();
 
             var clientInfo = ClientDetector(uaString, ret);
 
@@ -134,7 +145,7 @@ namespace Udger.Parser.V3
 
             if (normalizedIp != null)
             {
-                Prepare();
+                //Prepare();
 
                 if (IpParserEnabled)
                 {
@@ -155,8 +166,6 @@ namespace Udger.Parser.V3
 
                 if (ipv4Int != null)
                 {
-
-
                     ret.IpVer = 4;
                     var index = _datacenterRangeList.BinarySearch(new DatacenterRange { IpFrom = ipv4Int.Value }, _datacenterRangeIpFromComparer);
                     if (index >= 0)
@@ -229,51 +238,34 @@ namespace Udger.Parser.V3
             _regexCache[regex] = patRegex;
             return patRegex;
         }
-
-        private void FetchDeviceBrand(String uaString, UaResult ret)
+        
+        private void FetchDeviceBrand(string uaString, UaResult ret)
         {
-            using (var preparedStatement = _connection.CreateCommand())
+            var deviceRegexs = _osDeviceRegexList.Where(x => x.OsFamilyCode == ret.OsFamilyCode && (x.OsCode == "-all-" || x.OsCode == ret.OsCode));
+
+            foreach (var deviceRegex in deviceRegexs)
             {
-                preparedStatement.CommandText = UdgerSqlQuery.SqlDeviceRegex;
-                preparedStatement.Parameters.Add(ret.OsFamilyCode == null
-                    ? new SqliteParameter("@0", DBNull.Value)
-                    : new SqliteParameter("@0", ret.OsFamilyCode));
-                preparedStatement.Parameters.Add(ret.OsCode == null
-                    ? new SqliteParameter("@1", DBNull.Value)
-                    : new SqliteParameter("@1", ret.OsCode));
+                var patRegex = GetRegexFromCache(deviceRegex.Regstring);
+                var matcher = patRegex.Match(uaString);
+                if (!matcher.Success)
+                    continue;
 
-                preparedStatement.Parameters[0].Value = (object)ret.OsFamilyCode ?? DBNull.Value;
-                preparedStatement.Parameters[1].Value = (object)ret.OsCode ?? DBNull.Value;
-                using (var devRegexRs = preparedStatement.ExecuteReader())
+                if (_regexDeviceBrandDictionary.TryGetValue(Tuple.Create(deviceRegex.Id, matcher.Groups[1].Value), out var deviceBrand))
                 {
-                    while (devRegexRs.Read())
-                    {
-                        var devId = devRegexRs.GetString(0);
-                        var regex = devRegexRs.GetString(1);
-                        if (devId == null || regex == null)
-                            continue;
-
-                        var patRegex = GetRegexFromCache(regex);
-                        var matcher = patRegex.Match(uaString);
-                        if (!matcher.Success)
-                            continue;
-
-                        using (var devNameListRs = GetFirstRow(UdgerSqlQuery.SqlDeviceNameList, devId, matcher.Groups[1].Value))
-                        {
-                            if (devNameListRs == null || !devNameListRs.Read())
-                                continue;
-
-                            DataReader.FetchDeviceBrand(devNameListRs, ret);
-                        }
-                        break;
-                    }
+                    ret.DeviceMarketname = deviceBrand.Marketname;
+                    ret.DeviceBrand = deviceBrand.Brand;
+                    ret.DeviceBrandCode = deviceBrand.BrandCode;
+                    ret.DeviceBrandHomepage = deviceBrand.BrandHomepage;
+                    ret.DeviceBrandIcon = deviceBrand.BrandIcon;
+                    ret.DeviceBrandIconBig = deviceBrand.BrandIconBig;
+                    ret.DeviceBrandInfoUrl = deviceBrand.BrandInfoUrl;
+                    return;
                 }
             }
         }
 
         private Tuple<int, Match> FindIdFromListFullScan(string uaString, ImmutableList<IdRegString> list)
         {
-
             foreach (var irs in list)
             {
                 var matcher = irs.Pattern.Match(uaString);
@@ -290,24 +282,26 @@ namespace Udger.Parser.V3
             var rowidMatchTuple = FindIdFromListFullScan(uaString, _deviceRegstringList);
             if (rowidMatchTuple.Item1 != -1)
             {
-                using (var rs = GetFirstRow(UdgerSqlQuery.SqlDevice, rowidMatchTuple.Item1))
+                if (_rowIdDeviceDictionary.TryGetValue(rowidMatchTuple.Item1, out var device))
                 {
-                    if (rs != null && rs.Read())
-                    {
-                        DataReader.FetchDevice(rs, ret);
-                    }
+                    ret.DeviceClass = device.DeviceClass;
+                    ret.DeviceClassCode = device.DeviceClassCode;
+                    ret.DeviceClassIcon = device.DeviceClassIcon;
+                    ret.DeviceClassIconBig = device.DeviceClassIconBig;
+                    ret.DeviceClassInfoUrl = device.DeviceClassInfoUrl;
                 }
             }
             else
             {
                 if (clientInfo.ClassId != null && clientInfo.ClassId != -1)
                 {
-                    using (var rs = GetFirstRow(UdgerSqlQuery.SqlClientClass, clientInfo.ClassId.ToString()))
+                    if (_classIdDeviceDictionary.TryGetValue(clientInfo.ClassId.Value, out var device))
                     {
-                        if (rs != null && rs.Read())
-                        {
-                            DataReader.FetchDevice(rs, ret);
-                        }
+                        ret.DeviceClass = device.DeviceClass;
+                        ret.DeviceClassCode = device.DeviceClassCode;
+                        ret.DeviceClassIcon = device.DeviceClassIcon;
+                        ret.DeviceClassIconBig = device.DeviceClassIconBig;
+                        ret.DeviceClassInfoUrl = device.DeviceClassInfoUrl;
                     }
                 }
             }
@@ -318,13 +312,19 @@ namespace Udger.Parser.V3
             var rowidMatchTuple = FindIdFromList(uaString, _osWordDetector.FindWords(uaString), _osRegstringList);
             if (rowidMatchTuple.Item1 != -1)
             {
-                using (var rs = GetFirstRow(UdgerSqlQuery.SqlOs, rowidMatchTuple.Item1))
+                if (_rowIdOsDictionary.TryGetValue(rowidMatchTuple.Item1, out var os))
                 {
-                    
-                    if (rs.Read())
-                    {
-                        DataReader.FetchOS(rs, ret);
-                    }
+                    ret.OsFamily = os.OSFamily;
+                    ret.OsFamilyCode = os.OSFamilyCode;
+                    ret.Os = os.OS;
+                    ret.OsCode = os.OSCode;
+                    ret.OsHomepage = os.OSHomePage;
+                    ret.OsIcon = os.OSIcon;
+                    ret.OsIconBig = os.OSIconBig;
+                    ret.OsFamilyVendor = os.OSFamilyVendor;
+                    ret.OsFamilyVendorCode = os.OSFamilyVendorCode;
+                    ret.OsFamilyVendorHomepage = os.OSFamilyVedorHomepage;
+                    ret.OsInfoUrl = os.OSInfoUrl;
                 }
             }
             else
@@ -332,12 +332,19 @@ namespace Udger.Parser.V3
                 if (clientInfo.ClientId == 0)
                     return;
 
-                using (var rs = GetFirstRow(UdgerSqlQuery.SqlClientOs, clientInfo.ClientId.ToString()))
+                if (_clientIdOsDictionary.TryGetValue(clientInfo.ClientId, out var os))
                 {
-                    if (rs.Read())
-                    {
-                        DataReader.FetchOS(rs, ret);
-                    }
+                    ret.OsFamily = os.OSFamily;
+                    ret.OsFamilyCode = os.OSFamilyCode;
+                    ret.Os = os.OS;
+                    ret.OsCode = os.OSCode;
+                    ret.OsHomepage = os.OSHomePage;
+                    ret.OsIcon = os.OSIcon;
+                    ret.OsIconBig = os.OSIconBig;
+                    ret.OsFamilyVendor = os.OSFamilyVendor;
+                    ret.OsFamilyVendorCode = os.OSFamilyVendorCode;
+                    ret.OsFamilyVendorHomepage = os.OSFamilyVedorHomepage;
+                    ret.OsInfoUrl = os.OSInfoUrl;
                 }
             }
         }
@@ -361,9 +368,7 @@ namespace Udger.Parser.V3
                 return cmd.ExecuteReader(CommandBehavior.SingleRow);
             }
         }
-
-
-
+        
         private Tuple<int, Match> FindIdFromList(string uaString, ICollection<int> foundClientWords, IEnumerable<IdRegString> list)
         {
             foreach (var irs in list)
@@ -405,39 +410,77 @@ namespace Udger.Parser.V3
         private ClientInfo ClientDetector(string uaString, UaResult ret)
         {
             var clientInfo = new ClientInfo();
-
-            using (var rs1 = GetFirstRow(UdgerSqlQuery.SqlCrawler, uaString))
+            
+            if (_uaStringUaDictionary.TryGetValue(uaString, out var ua))
             {
-                if (rs1.Read())
+                ret.ClientId = ua.ClientId;
+                ret.ClassId = ua.ClassId;
+                ret.UaClass = ua.UaClass;
+                ret.UaClassCode = ua.UaClassCode;
+                ret.Ua = ua.UserAgent;
+                ret.UaEngine = ua.UaEngine;
+                ret.UaVersion = ua.UaVersion;
+                ret.UaVersionMajor = ua.UaVersionMajor;
+                ret.CrawlerLastSeen = ua.CrawlerLastSeen;
+                ret.CrawlerRespectRobotstxt = ua.CrawlerRespectRobotstxt;
+                ret.CrawlerCategory = ua.CrawlerCategory;
+                ret.CrawlerCategoryCode = ua.CrawlerCategoryCode;
+                ret.UaUptodateCurrentVersion = ua.UaUptodateCurrentVersion;
+                ret.UaFamily = ua.UaFamily;
+                ret.UaFamilyCode = ua.UaFamilyCode;
+                ret.UaFamilyHomepage = ua.UaFamilyHomepage;
+                ret.UaFamilyIcon = ua.UaFamilyIcon;
+                ret.UaFamilyIconBig = ua.UaFamilyIconBig;
+                ret.UaFamilyVendor = ua.UaFamilyVendor;
+                ret.UaFamilyVendorCode = ua.UaFamilyVendorCode;
+                ret.UaFamilyVendorHomepage = ua.UaFamilyVendorHomepage;
+                ret.UaFamilyInfoUrl = ua.UaFamilyInfoUrl;
+
+                clientInfo.ClassId = 99;
+                clientInfo.ClientId = -1;
+            }
+            else
+            {
+                var rowidMatchTuple = FindIdFromList(uaString, _clientWordDetector.FindWords(uaString), _clientRegstringList);
+                if (rowidMatchTuple.Item1 != -1)
                 {
-                    DataReader.FetchUA(rs1, ret);
-                    clientInfo.ClassId = 99;
-                    clientInfo.ClientId = -1;
+                    if (_rowIdUaDictionary.TryGetValue(rowidMatchTuple.Item1, out ua))
+                    {
+                        ret.ClientId = ua.ClientId;
+                        ret.ClassId = ua.ClassId;
+                        ret.UaClass = ua.UaClass;
+                        ret.UaClassCode = ua.UaClassCode;
+                        ret.Ua = ua.UserAgent;
+                        ret.UaEngine = ua.UaEngine;
+                        ret.UaVersion = ua.UaVersion;
+                        ret.UaVersionMajor = ua.UaVersionMajor;
+                        ret.CrawlerLastSeen = ua.CrawlerLastSeen;
+                        ret.CrawlerRespectRobotstxt = ua.CrawlerRespectRobotstxt;
+                        ret.CrawlerCategory = ua.CrawlerCategory;
+                        ret.CrawlerCategoryCode = ua.CrawlerCategoryCode;
+                        ret.UaUptodateCurrentVersion = ua.UaUptodateCurrentVersion;
+                        ret.UaFamily = ua.UaFamily;
+                        ret.UaFamilyCode = ua.UaFamilyCode;
+                        ret.UaFamilyHomepage = ua.UaFamilyHomepage;
+                        ret.UaFamilyIcon = ua.UaFamilyIcon;
+                        ret.UaFamilyIconBig = ua.UaFamilyIconBig;
+                        ret.UaFamilyVendor = ua.UaFamilyVendor;
+                        ret.UaFamilyVendorCode = ua.UaFamilyVendorCode;
+                        ret.UaFamilyVendorHomepage = ua.UaFamilyVendorHomepage;
+                        ret.UaFamilyInfoUrl = ua.UaFamilyInfoUrl;
+
+                        clientInfo.ClassId = ret.ClassId;
+                        clientInfo.ClientId = ret.ClientId;
+                        PatchVersions(ret, rowidMatchTuple.Item2);
+                    }
                 }
                 else
                 {
-                    var rowidMatchTuple = FindIdFromList(uaString, _clientWordDetector.FindWords(uaString), _clientRegstringList);
-                    if (rowidMatchTuple.Item1 != -1)
-                    {
-                        using (var rs2 = GetFirstRow(UdgerSqlQuery.SqlClient, rowidMatchTuple.Item1))
-                        {
-                            if (rs2.HasRows && rs2.Read())
-                            {
-                                DataReader.FetchUA(rs2, ret);
-                                clientInfo.ClassId = ret.ClassId;
-                                clientInfo.ClientId = ret.ClientId;
-                                PatchVersions(ret, rowidMatchTuple.Item2);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        ret.UaClass = "Unrecognized";
-                        ret.UaClassCode = "unrecognized";
-                    }
-
+                    ret.UaClass = "Unrecognized";
+                    ret.UaClassCode = "unrecognized";
                 }
             }
+
             return clientInfo;
         }
 
@@ -446,6 +489,15 @@ namespace Udger.Parser.V3
             Connect();
             if (_clientRegstringList == null)
             {
+                FillRowIdOsDictionary();
+                FillClientIdOsDictionary();
+                FillRowIdDeviceDictionary();
+                FillClassIdDeviceDictionary();
+                FillUaStringUaDictionary();
+                FillRowIdUaDictionary();
+                FillDeviceRegex();
+                FillDeviceBrand();
+                
                 InitStaticStructures(_connection);
             }
         }
@@ -549,7 +601,136 @@ namespace Udger.Parser.V3
             }
             return new WordDetector(wordInfos);
         }
+        private void FillUaStringUaDictionary()
+        {
+            _uaStringUaDictionary = new ConcurrentDictionary<string, Ua>();
+            using (var cmd = _connection.CreateCommand())
+            {
+                cmd.CommandText = UdgerSqlQuery.SqlCrawlerAll;
+                using (var rs = cmd.ExecuteReader())
+                {
+                    while (rs.Read())
+                    {
+                        _uaStringUaDictionary[DataReader.GetDbString(rs, "ua_string")] = DataReader.ReadUA(rs);
+                    }
+                }
+            }
+        }
 
+        private void FillRowIdUaDictionary()
+        {
+            _rowIdUaDictionary = new ConcurrentDictionary<int, Ua>();
+            using (var cmd = _connection.CreateCommand())
+            {
+                cmd.CommandText = UdgerSqlQuery.SqlClientAll;
+                using (var rs = cmd.ExecuteReader())
+                {
+                    while (rs.Read())
+                    {
+                        _rowIdUaDictionary[DataReader.GetDbInt32(rs, "rowid")] = DataReader.ReadUA(rs);
+                    }
+                }
+            }
+        }
+
+        private void FillRowIdOsDictionary()
+        {
+            _rowIdOsDictionary = new ConcurrentDictionary<int, Os>();
+            using (var cmd = _connection.CreateCommand())
+            {
+                cmd.CommandText = UdgerSqlQuery.SqlOsAll;
+                using (var rs = cmd.ExecuteReader())
+                {
+                    while (rs.Read())
+                    {
+                        _rowIdOsDictionary[DataReader.GetDbInt32(rs, "rowid")] = DataReader.ReadOS(rs);
+                    }
+                }
+            }
+        }
+
+        private void FillRowIdDeviceDictionary()
+        {
+            _rowIdDeviceDictionary = new ConcurrentDictionary<int, Device>();
+            using (var cmd = _connection.CreateCommand())
+            {
+                cmd.CommandText = UdgerSqlQuery.SqlDeviceAll;
+                using (var rs = cmd.ExecuteReader())
+                {
+                    while (rs.Read())
+                    {
+                        _rowIdDeviceDictionary[DataReader.GetDbInt32(rs, "rowid")] = DataReader.ReadDevice(rs);
+                    }
+                }
+            }
+        }
+
+        private void FillClassIdDeviceDictionary()
+        {
+            _classIdDeviceDictionary = new ConcurrentDictionary<int, Device>();
+            using (var cmd = _connection.CreateCommand())
+            {
+                cmd.CommandText = UdgerSqlQuery.SqlClientClassAll;
+                using (var rs = cmd.ExecuteReader())
+                {
+                    while (rs.Read())
+                    {
+                        _classIdDeviceDictionary[DataReader.GetDbInt32(rs, "id")] = DataReader.ReadDevice(rs);
+                    }
+                }
+            }
+        }
+
+        private void FillClientIdOsDictionary()
+        {
+            _clientIdOsDictionary = new ConcurrentDictionary<int, Os>();
+            using (var cmd = _connection.CreateCommand())
+            {
+                cmd.CommandText = UdgerSqlQuery.SqlClientOsAll;
+                using (var rs = cmd.ExecuteReader())
+                {
+                    while (rs.Read())
+                    {
+                        _clientIdOsDictionary[DataReader.GetDbInt32(rs, "client_id")] = DataReader.ReadOS(rs);
+                    }
+                }
+            }
+        }
+
+        private void FillDeviceRegex()
+        {
+            using (var cmd = _connection.CreateCommand())
+            {
+                cmd.CommandText = UdgerSqlQuery.SqlDeviceRegexAll;
+                using (var rs = cmd.ExecuteReader())
+                {
+                    var l = new List<DeviceRegex>();
+
+                    while (rs.Read())
+                    {
+                        l.Add(DataReader.ReadDeviceRegex(rs));
+                    }
+                    _osDeviceRegexList = l.OrderBy(regex => regex.Sequence).ToImmutableList();
+                }
+            }
+        }
+
+        private void FillDeviceBrand()
+        {
+            _regexDeviceBrandDictionary = new ConcurrentDictionary<Tuple<string, string>, DeviceBrand>();
+            using (var cmd = _connection.CreateCommand())
+            {
+                cmd.CommandText = UdgerSqlQuery.SqlDeviceNameListAll;
+                using (var rs = cmd.ExecuteReader())
+                {
+                    while (rs.Read())
+                    {
+                        var key = Tuple.Create(DataReader.GetDbString(rs, "regex_id"), DataReader.GetDbString(rs, "code"));
+                        _regexDeviceBrandDictionary[key] = DataReader.ReadDeviceBrand(rs);
+                    }
+                }
+            }
+        }
 
         private void InitStaticStructures(DbConnection connection)
         {
@@ -580,17 +761,26 @@ namespace Udger.Parser.V3
             }
         }
 
+        private readonly object _obj = new object();
+
         private void Connect()
         {
             if (_connection != null) return;
 
-            _connection = new SqliteConnection(new SqliteConnectionStringBuilder
+            lock (_obj)
             {
-                DataSource = _dbFilePath,
-                Mode = SqliteOpenMode.ReadOnly,
-                Cache = SqliteCacheMode.Shared,
-            }.ToString());
-            _connection.Open();
+                if (_connection != null) return;
+
+                _connection = new SqliteConnection(new SqliteConnectionStringBuilder
+                {
+                    DataSource = _dbFilePath,
+                    Mode = SqliteOpenMode.ReadOnly,
+                    Cache = SqliteCacheMode.Shared,
+                }.ToString());
+
+
+                _connection.Open();
+            }
         }
 
         public void Dispose()

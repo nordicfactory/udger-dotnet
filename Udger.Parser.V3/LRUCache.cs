@@ -15,7 +15,7 @@ namespace Udger.Parser.V3
     /// </summary>
     /// <typeparam name="TK">The key type.</typeparam>
     /// <typeparam name="TV">The value type.</typeparam>
-    public class LRUCache<TK, TV>
+    internal class LRUCache<TK, TV>
     {
         private readonly Dictionary<TK, CacheNode> _entries;
         private int _count;

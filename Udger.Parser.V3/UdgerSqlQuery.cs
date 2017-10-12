@@ -1,45 +1,76 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Udger.Parser.V3
+﻿namespace Udger.Parser.V3
 {
     internal class UdgerSqlQuery
     {
+        //2780
         /// <summary>
-        /// Contain query for crawlers.
+        /// Contain query for crawlers. 
         /// </summary>
         public const string SqlCrawler = @"
-SELECT
-    NULL AS client_id,
-    NULL AS class_id,
-    'Crawler' AS ua_class,
-    'crawler' AS ua_class_code,
-    name AS ua,
-    NULL AS ua_engine,
-    ver AS ua_version,
-    ver_major AS ua_version_major,
-    last_seen AS crawler_last_seen,
-    respect_robotstxt AS crawler_respect_robotstxt,
-    crawler_classification AS crawler_category,
-    crawler_classification_code AS crawler_category_code,
-    NULL AS ua_uptodate_current_version,
-    family AS ua_family,
-    family_code AS ua_family_code,
-    family_homepage AS ua_family_homepage,
-    family_icon AS ua_family_icon,
-    NULL AS ua_family_icon_big,
-    vendor AS ua_family_vendor,
-    vendor_code AS ua_family_vendor_code,
-    vendor_homepage AS ua_family_vendor_homepage,
-    'https://udger.com/resources/ua-list/bot-detail?bot=' || REPLACE(family, ' ', '%20') || '#id' || udger_crawler_list.id AS ua_family_info_url
-FROM
-    udger_crawler_list
-LEFT JOIN
-    udger_crawler_class ON udger_crawler_class.id = udger_crawler_list.class_id
-WHERE
-    ua_string = @0";
+        SELECT
+            NULL AS client_id,
+            NULL AS class_id,
+            'Crawler' AS ua_class,
+            'crawler' AS ua_class_code,
+            name AS ua,
+            NULL AS ua_engine,
+            ver AS ua_version,
+            ver_major AS ua_version_major,
+            last_seen AS crawler_last_seen,
+            respect_robotstxt AS crawler_respect_robotstxt,
+            crawler_classification AS crawler_category,
+            crawler_classification_code AS crawler_category_code,
+            NULL AS ua_uptodate_current_version,
+            family AS ua_family,
+            family_code AS ua_family_code,
+            family_homepage AS ua_family_homepage,
+            family_icon AS ua_family_icon,
+            NULL AS ua_family_icon_big,
+            vendor AS ua_family_vendor,
+            vendor_code AS ua_family_vendor_code,
+            vendor_homepage AS ua_family_vendor_homepage,
+            'https://udger.com/resources/ua-list/bot-detail?bot=' || REPLACE(family, ' ', '%20') || '#id' || udger_crawler_list.id AS ua_family_info_url
+        FROM
+            udger_crawler_list
+        LEFT JOIN
+            udger_crawler_class ON udger_crawler_class.id = udger_crawler_list.class_id
+        WHERE
+            ua_string = @0
+        ";
 
+        public const string SqlCrawlerAll = @"
+        SELECT
+            ua_string,
+            NULL AS client_id,
+            NULL AS class_id,
+            'Crawler' AS ua_class,
+            'crawler' AS ua_class_code,
+            name AS ua,
+            NULL AS ua_engine,
+            ver AS ua_version,
+            ver_major AS ua_version_major,
+            last_seen AS crawler_last_seen,
+            respect_robotstxt AS crawler_respect_robotstxt,
+            crawler_classification AS crawler_category,
+            crawler_classification_code AS crawler_category_code,
+            NULL AS ua_uptodate_current_version,
+            family AS ua_family,
+            family_code AS ua_family_code,
+            family_homepage AS ua_family_homepage,
+            family_icon AS ua_family_icon,
+            NULL AS ua_family_icon_big,
+            vendor AS ua_family_vendor,
+            vendor_code AS ua_family_vendor_code,
+            vendor_homepage AS ua_family_vendor_homepage,
+            'https://udger.com/resources/ua-list/bot-detail?bot=' || REPLACE(family, ' ', '%20') || '#id' || udger_crawler_list.id AS ua_family_info_url
+        FROM
+            udger_crawler_list
+        LEFT JOIN
+            udger_crawler_class ON udger_crawler_class.id = udger_crawler_list.class_id
+        ";
+
+
+        //831
         /// <summary>
         /// Query for clients.
         /// </summary>
@@ -75,7 +106,41 @@ WHERE
             udger_client_class ON udger_client_class.id = udger_client_list.class_id
         WHERE
             ur.rowid=@0
-";
+        ";
+
+        public const string SqlClientAll = @"
+        SELECT
+            ur.rowid,
+            client_id AS client_id,
+            class_id AS class_id,
+            client_classification AS ua_class,
+            client_classification_code AS ua_class_code,
+            name AS ua,
+            engine AS ua_engine,
+            NULL AS ua_version,
+            NULL AS ua_version_major,
+            NULL AS crawler_last_seen,
+            NULL AS crawler_respect_robotstxt,
+            NULL AS crawler_category,
+            NULL AS crawler_category_code,
+            uptodate_current_version AS ua_uptodate_current_version,
+            name AS ua_family,
+            name_code AS ua_family_code,
+            homepage AS ua_family_homepage,
+            icon AS ua_family_icon,
+            icon_big AS ua_family_icon_big,
+            vendor AS ua_family_vendor,
+            vendor_code AS ua_family_vendor_code,
+            vendor_homepage AS ua_family_vendor_homepage,
+            'https://udger.com/resources/ua-list/browser-detail?browser=' || REPLACE(name, ' ', '%20') AS ua_family_info_url
+        FROM
+            udger_client_regex ur
+        JOIN
+            udger_client_list ON udger_client_list.id = ur.client_id
+        JOIN
+            udger_client_class ON udger_client_class.id = udger_client_list.class_id
+        ";
+
 
         /// <summary>
         /// Query for operating system columns.
@@ -90,10 +155,11 @@ WHERE
             icon_big AS os_icon_big,
             vendor AS os_family_vendor,
             vendor_code AS os_family_vendor_code,
-            vendor_homepage AS os_family_vedor_homepage,
+            vendor_homepage AS os_family_vendor_homepage,
             'https://udger.com/resources/ua-list/os-detail?os=' || REPLACE(name, ' ', '%20') AS os_info_url
-";
+        ";
 
+        //328
         /// <summary>
         /// Query of operating system.
         /// </summary>
@@ -106,8 +172,20 @@ WHERE
             udger_os_list ON udger_os_list.id = ur.os_id
         WHERE
             ur.rowid=@0
-";
+        ";
 
+        public static readonly string SqlOsAll = $@"
+        SELECT
+            ur.rowid,
+            {OsColumns}
+        FROM
+            udger_os_regex ur
+        JOIN
+            udger_os_list ON udger_os_list.id = ur.os_id
+        ";
+
+
+        //78
         /// <summary>
         /// Query for client operating system.
         /// </summary>
@@ -120,7 +198,17 @@ WHERE
             udger_os_list ON udger_os_list.id = udger_client_os_relation.os_id
         WHERE
             client_id = @0
-";
+        ";
+
+        public static readonly string SqlClientOsAll = $@"
+        SELECT
+            client_id,
+            {OsColumns}
+        FROM
+            udger_client_os_relation
+        JOIN
+            udger_os_list ON udger_os_list.id = udger_client_os_relation.os_id
+        ";
 
         /// <summary>
         /// Device columns list.
@@ -133,6 +221,7 @@ WHERE
             'https://udger.com/resources/ua-list/device-detail?device=' || REPLACE(name, ' ', '%20') AS device_class_info_url
 ";
 
+        //671
         /// <summary>
         /// Query for device.
         /// </summary>
@@ -146,8 +235,19 @@ WHERE
             udger_deviceclass_list ON udger_deviceclass_list.id = ur.deviceclass_id
         WHERE
             ur.rowid=@0
-";
+        ";
 
+        public static readonly string SqlDeviceAll = $@"
+        SELECT
+            ur.rowid,
+            {DeviceColumns}
+        FROM
+            udger_deviceclass_regex ur
+        JOIN
+            udger_deviceclass_list ON udger_deviceclass_list.id = ur.deviceclass_id
+        ";
+
+        //12
         /// <summary>
         /// Query for client class.
         /// </summary>
@@ -160,7 +260,17 @@ WHERE
             udger_client_class ON udger_client_class.deviceclass_id = udger_deviceclass_list.id
         WHERE
             udger_client_class.id = @0
-";
+        ";
+
+        public static readonly string SqlClientClassAll = $@"
+        SELECT
+            udger_client_class.id,
+            {DeviceColumns}
+        FROM
+            udger_deviceclass_list
+        JOIN
+            udger_client_class ON udger_client_class.deviceclass_id = udger_deviceclass_list.id
+        ";
 
         /// <summary>
         /// IP columns list.
@@ -190,6 +300,7 @@ WHERE
             respect_robotstxt AS crawler_respect_robotstxt
 ";
 
+        //1295727
         /// <summary>
         /// Query for IP.
         /// </summary>
@@ -219,6 +330,7 @@ WHERE
         homepage AS datacenter_homepage        
 ";
 
+        //15248
         /// <summary>
         /// Query for data center.
         /// </summary>
@@ -234,6 +346,7 @@ WHERE
         ORDER BY iplong_from
 ";
 
+        //346
         /// <summary>
         /// Query for data center IPV6 ranges???
         /// </summary>
@@ -255,6 +368,7 @@ WHERE
             iplong_from7 <= @14 AND iplong_to7 >= @15
 ";
 
+        //71
         /// <summary>
         /// Query for device regex.
         /// </summary>
@@ -267,8 +381,20 @@ WHERE
         WHERE
             os_family_code=@0 AND (os_code='-all-' OR os_code=@1)
         ORDER BY sequence
-";
+        ";
 
+        public const string SqlDeviceRegexAll = @"
+        SELECT
+            sequence,
+            os_family_code,
+            os_code,
+            id,
+            regstring
+        FROM
+            udger_devicename_regex
+        ";
+
+        //32795
         /// <summary>
         /// Query for device name list.
         /// </summary>
@@ -286,6 +412,22 @@ WHERE
             udger_devicename_brand ON udger_devicename_brand.id=udger_devicename_list.brand_id
         WHERE
             regex_id = @0 AND code = @1
-";
+        ";
+
+        public const string SqlDeviceNameListAll = @"
+        SELECT
+            regex_id,
+            code,
+            marketname,
+            brand_code,
+            brand,
+            brand_url,
+            icon,
+            icon_big
+        FROM
+            udger_devicename_list
+        JOIN
+            udger_devicename_brand ON udger_devicename_brand.id=udger_devicename_list.brand_id
+        ";
     }
 }

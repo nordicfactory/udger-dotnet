@@ -7,7 +7,7 @@
             Ip = ip;
         }
 
-        public string Ip { get; }
+        public string Ip { get; set; }
         public int IpVer { get; set; }
         public string IpClassification { get; set; }
         public string IpClassificationCode { get; set; }

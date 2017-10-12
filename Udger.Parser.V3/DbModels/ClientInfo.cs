@@ -1,4 +1,4 @@
-﻿namespace Udger.Parser.V3
+﻿namespace Udger.Parser.V3.DbModels
 {
     /// <summary>
     /// Class implementing client info.

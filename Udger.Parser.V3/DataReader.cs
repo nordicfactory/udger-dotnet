@@ -1,20 +1,9 @@
-﻿using System;
-using System.Data;
+﻿using System.Data;
 using System.Data.Common;
+using Udger.Parser.V3.DbModels;
 
 namespace Udger.Parser.V3
 {
-
-
-    internal class DatacenterRange
-    {
-        public string HomePage { get; set; }
-        public string Name { get; set; }
-        public string NameCode { get; set; }
-        public long IpFrom { get; set; }
-        public long IpTo { get; set; }
-    }
-
     internal static class DataReader
     {
         private static string UDGER_UA_DEV_BRAND_LIST_URL = "https://udger.com/resources/ua-list/devices-brand-detail?brand=";
@@ -66,80 +55,97 @@ namespace Udger.Parser.V3
             ret.IpLastSeen = GetDbString(rs, "ip_last_seen");
         }
 
-        internal static void FetchDevice(DbDataReader rs, UaResult ret)
+        internal static Device ReadDevice(DbDataReader rs)
         {
-            ret.DeviceClass = GetDbString(rs, "device_class");
-            ret.DeviceClassCode = GetDbString(rs, "device_class_code");
-            ret.DeviceClassIcon = GetDbString(rs, "device_class_icon");
-            ret.DeviceClassIconBig = GetDbString(rs, "device_class_icon_big");
-            ret.DeviceClassInfoUrl = GetDbString(rs, "device_class_info_url");
+            return new Device
+            {
+                DeviceClass = GetDbString(rs, "device_class"),
+                DeviceClassCode = GetDbString(rs, "device_class_code"),
+                DeviceClassIcon = GetDbString(rs, "device_class_icon"),
+                DeviceClassIconBig = GetDbString(rs, "device_class_icon_big"),
+                DeviceClassInfoUrl = GetDbString(rs, "device_class_info_url"),
+            };
         }
 
-        internal static void FetchOS(DbDataReader rs, UaResult ret)
+        internal static Os ReadOS(DbDataReader rs)
         {
-            ret.OsFamily = Nvl(rs, 0) ?? "";
-            ret.OsFamilyCode = Nvl(rs, 1) ?? "";
-            ret.Os = Nvl(rs, 2) ?? "";
-            ret.OsCode = Nvl(rs, 3) ?? "";
-            ret.OsHomepage = Nvl(rs, 4) ?? "";
-            ret.OsIcon = Nvl(rs, 5) ?? "";
-            ret.OsIconBig = Nvl(rs, 6) ?? "";
-            ret.OsFamilyVendor = Nvl(rs, 7) ?? "";
-            ret.OsFamilyVendorCode = Nvl(rs, 8) ?? "";
-            ret.OsFamilyVendorHomepage = Nvl(rs, 9) ?? "";
-            ret.OsInfoUrl = Nvl(rs, 10) ?? "";
+            return new Os
+            {
+                OSFamily = GetDbString(rs, "os_family"),
+                OSFamilyCode = GetDbString(rs, "os_family_code"),
+                OS = GetDbString(rs, "os"),
+                OSCode = GetDbString(rs, "os_code"),
+                OSHomePage = GetDbString(rs, "os_home_page"),
+                OSIcon = GetDbString(rs, "os_icon"),
+                OSIconBig = GetDbString(rs, "os_icon_big"),
+                OSFamilyVendor = GetDbString(rs, "os_family_vendor"),
+                OSFamilyVendorCode = GetDbString(rs, "os_family_vendor_code"),
+                OSFamilyVedorHomepage = GetDbString(rs, "os_family_vendor_homepage"),
+                OSInfoUrl = GetDbString(rs, "os_info_url")
+            };
         }
 
-        internal static void FetchUA(IDataRecord rs, UaResult ret)
+        internal static Ua ReadUA(IDataRecord rs)
         {
-            ret.ClientId = GetDbInt32(rs, "client_id");
-            ret.ClassId = GetDbInt32(rs, "class_id");
-            ret.UaClass = GetDbString(rs, "ua_class");
-            ret.UaClassCode = GetDbString(rs, "ua_class_code");
-            ret.Ua = GetDbString(rs, "ua");
-            ret.UaEngine = GetDbString(rs, "ua_engine");
-            ret.UaVersion = GetDbString(rs, "ua_version");
-            ret.UaVersionMajor = GetDbString(rs, "ua_version_major");
-            ret.CrawlerLastSeen = GetDbString(rs, "crawler_last_seen");
-            ret.CrawlerRespectRobotstxt = GetDbString(rs, "crawler_respect_robotstxt");
-            ret.CrawlerCategory = GetDbString(rs, "crawler_category");
-            ret.CrawlerCategoryCode = GetDbString(rs, "crawler_category_code");
-            ret.UaUptodateCurrentVersion = GetDbString(rs, "ua_uptodate_current_version"); ;
-            ret.UaFamily = GetDbString(rs, "ua_family");
-            ret.UaFamilyCode = GetDbString(rs, "ua_family_code");
-            ret.UaFamilyHomepage = GetDbString(rs, "ua_family_homepage");
-            ret.UaFamilyIcon = GetDbString(rs, "ua_family_icon");
-            ret.UaFamilyIconBig = GetDbString(rs, "ua_family_icon_big");
-            ret.UaFamilyVendor = GetDbString(rs, "ua_family_vendor");
-            ret.UaFamilyVendorCode = GetDbString(rs, "ua_family_vendor_code");
-            ret.UaFamilyVendorHomepage = GetDbString(rs, "ua_family_vendor_homepage");
-            ret.UaFamilyInfoUrl = GetDbString(rs, "ua_family_info_url");
+            return new Ua
+            {
+                ClientId = GetDbInt32(rs, "client_id"),
+                ClassId = GetDbInt32(rs, "class_id"),
+                UaClass = GetDbString(rs, "ua_class"),
+                UaClassCode = GetDbString(rs, "ua_class_code"),
+                UserAgent = GetDbString(rs, "ua"),
+                UaEngine = GetDbString(rs, "ua_engine"),
+                UaVersion = GetDbString(rs, "ua_version"),
+                UaVersionMajor = GetDbString(rs, "ua_version_major"),
+                CrawlerLastSeen = GetDbString(rs, "crawler_last_seen"),
+                CrawlerRespectRobotstxt = GetDbString(rs, "crawler_respect_robotstxt"),
+                CrawlerCategory = GetDbString(rs, "crawler_category"),
+                CrawlerCategoryCode = GetDbString(rs, "crawler_category_code"),
+                UaUptodateCurrentVersion = GetDbString(rs, "ua_uptodate_current_version"),
+                UaFamily = GetDbString(rs, "ua_family"),
+                UaFamilyCode = GetDbString(rs, "ua_family_code"),
+                UaFamilyHomepage = GetDbString(rs, "ua_family_homepage"),
+                UaFamilyIcon = GetDbString(rs, "ua_family_icon"),
+                UaFamilyIconBig = GetDbString(rs, "ua_family_icon_big"),
+                UaFamilyVendor = GetDbString(rs, "ua_family_vendor"),
+                UaFamilyVendorCode = GetDbString(rs, "ua_family_vendor_code"),
+                UaFamilyVendorHomepage = GetDbString(rs, "ua_family_vendor_homepage"),
+                UaFamilyInfoUrl = GetDbString(rs, "ua_family_info_url"),
+            };
         }
 
-
-        internal static void FetchDeviceBrand(IDataRecord dr, UaResult ret)
+        internal static DeviceRegex ReadDeviceRegex(IDataRecord dr)
         {
-            ret.DeviceMarketname = GetDbString(dr, "marketname");
-            ret.DeviceBrand = GetDbString(dr, "brand");
-            ret.DeviceBrandCode = GetDbString(dr, "brand_code");
-            ret.DeviceBrandHomepage = GetDbString(dr, "brand_url");
-            ret.DeviceBrandIcon = GetDbString(dr, "icon");
-            ret.DeviceBrandIconBig = GetDbString(dr, "icon_big");
-            ret.DeviceBrandInfoUrl = UDGER_UA_DEV_BRAND_LIST_URL + GetDbString(dr, "brand_code");
+            return new DeviceRegex
+            {
+                Id = GetDbString(dr, "id"),
+                OsCode = GetDbString(dr, "os_code"),
+                OsFamilyCode = GetDbString(dr, "os_family_code"),
+                Regstring = GetDbString(dr, "regstring"),
+                Sequence = GetDbInt32(dr, "sequence"),
+            };
         }
 
-        private static string GetDbString(IDataRecord rs, string name)
+        internal static DeviceBrand ReadDeviceBrand(IDataRecord dr)
+        {
+            return new DeviceBrand
+            {
+                Marketname = GetDbString(dr, "marketname"),
+                Brand = GetDbString(dr, "brand"),
+                BrandCode = GetDbString(dr, "brand_code"),
+                BrandHomepage = GetDbString(dr, "brand_url"),
+                BrandIcon = GetDbString(dr, "icon"),
+                BrandIconBig = GetDbString(dr, "icon_big"),
+                BrandInfoUrl = UDGER_UA_DEV_BRAND_LIST_URL + GetDbString(dr, "brand_code"),
+            };
+        }
+
+        public static string GetDbString(IDataRecord rs, string name)
         {
             return rs.IsDBNull(rs.GetOrdinal(name)) ? "" : rs.GetString(rs.GetOrdinal(name));
         }
 
-
-        private static string Nvl(IDataRecord rs, int i)
-        {
-            return rs.IsDBNull(i) ? "" : rs.GetString(i);
-        }
-
-        private static int GetDbInt32(IDataRecord rs, string name)
+        public static int GetDbInt32(IDataRecord rs, string name)
         {
             var i = rs.GetOrdinal(name);
             return rs.IsDBNull(i) ? 0 : rs.GetInt32(i);
