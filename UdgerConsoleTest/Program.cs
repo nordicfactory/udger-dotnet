@@ -10,7 +10,7 @@ namespace UdgerConsoleTest
             // Create a new UdgerParser object
             var parser = new UdgerParser(@"C:\code\notebooks\data\udgerdb_v3.dat");
             
-            Console.WriteLine(parser.ParseIp(@"23.20.0.0"));
+            Console.WriteLine(parser.ParseIp(@"107.178.218.71"));
             Console.WriteLine(parser.ParseIp(@"163.172.0.1"));
             Console.WriteLine(parser.ParseIp(@"127.0.0.1"));
 

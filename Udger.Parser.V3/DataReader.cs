@@ -15,8 +15,8 @@ namespace Udger.Parser.V3
                 HomePage = GetDbString(rs, "datacenter_homepage"),
                 Name = GetDbString(rs, "datacenter_name"),
                 NameCode = GetDbString(rs, "datacenter_name_code"),
-                IpFrom = GetDbInt32(rs, "iplong_from"),
-                IpTo = GetDbInt32(rs, "iplong_to"),
+                IpFrom = GetDbInt64(rs, "iplong_from"),
+                IpTo = GetDbInt64(rs, "iplong_to"),
             };
             return ret;
         }
@@ -149,6 +149,12 @@ namespace Udger.Parser.V3
         {
             var i = rs.GetOrdinal(name);
             return rs.IsDBNull(i) ? 0 : rs.GetInt32(i);
+        }
+
+        public static long GetDbInt64(IDataRecord rs, string name)
+        {
+            var i = rs.GetOrdinal(name);
+            return rs.IsDBNull(i) ? 0 : rs.GetInt64(i);
         }
 
     }
