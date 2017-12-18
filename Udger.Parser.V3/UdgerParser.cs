@@ -10,6 +10,7 @@ using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using Microsoft.Data.Sqlite;
 using Udger.Parser.V3.DbModels;
+using Udger.Parser.V3.RangeTree;
 
 namespace Udger.Parser.V3
 {
@@ -34,7 +35,7 @@ namespace Udger.Parser.V3
         private ImmutableList<IdRegString> _deviceRegstringList;
         private WordDetector _clientWordDetector;
         private WordDetector _osWordDetector;
-        private ImmutableList<DatacenterRange> _datacenterRangeList;
+        private IRangeTree<long, DatacenterRange> _datacenterRangeTree;
         private ConcurrentDictionary<int, Os> _rowIdOsDictionary;
         private ConcurrentDictionary<int, Os> _clientIdOsDictionary;
         private ConcurrentDictionary<int, Device> _rowIdDeviceDictionary;
@@ -52,13 +53,7 @@ namespace Udger.Parser.V3
         private readonly Regex _ipv6NormalizeRegex = new Regex("((?:(?:^|:)0+\\b){2,}):?(?!\\S*\\b\\1:0+\\b)(\\S*)", RegexOptions.Compiled);
         private readonly ConcurrentDictionary<string, Regex> _regexCache = new ConcurrentDictionary<string, Regex>();
         private readonly Regex PAT_UNPERLIZE = new Regex(@"^/?(.*)/([si]*)\s*$", RegexOptions.Compiled);
-
-        private readonly Comparer<DatacenterRange> _datacenterRangeIpFromComparer = Comparer<DatacenterRange>.Create((a, b) =>
-            a == null && b == null ? 0 :
-                (a == null ? -1 :
-                    (b == null ? 1 :
-                        a.IpFrom.CompareTo(b.IpFrom))));
-
+        
         public bool OsParserEnabled { get; set; } = true;
         public bool DeviceParserEnabled { get; set; } = true;
         public bool DeviceBrandParserEnabled { get; set; } = true;
@@ -89,7 +84,7 @@ namespace Udger.Parser.V3
             }
 
             var ret = new UaResult(uaString);
-            
+
             var clientInfo = ClientDetector(uaString, ret);
 
             if (OsParserEnabled)
@@ -125,7 +120,7 @@ namespace Udger.Parser.V3
 
             long? ipv4Int = null;
             string normalizedIp = null;
-
+            
             if (addr.AddressFamily == AddressFamily.InterNetwork)
             {
                 ipv4Int = 0;
@@ -139,7 +134,7 @@ namespace Udger.Parser.V3
             {
                 normalizedIp = _ipv6NormalizeRegex.Replace(addr.ToString(), "::$2");
             }
-            
+
             ret.IpClassification = "Unrecognized";
             ret.IpClassificationCode = "unrecognized";
 
@@ -164,32 +159,18 @@ namespace Udger.Parser.V3
                 }
 
                 if (!DataCenterParserEnabled) return ret;
-
+                
                 if (ipv4Int != null)
                 {
                     ret.IpVer = 4;
-                    var index = _datacenterRangeList.BinarySearch(new DatacenterRange { IpFrom = ipv4Int.Value }, _datacenterRangeIpFromComparer);
-                    if (index >= 0)
+                    var dc = SearchIpv4(ipv4Int.Value);
+                    if (dc != null)
                     {
-                        var dc = _datacenterRangeList[index];
                         ret.DataCenterName = dc.Name;
                         ret.DataCenterHomePage = dc.HomePage;
                         ret.DataCenterNameCode = dc.NameCode;
                     }
-                    else
-                    {
-                        index = ~index - 1; // -1 since binary search will return the first element bigger than the search value
-                        if (index >= 0 && index < _datacenterRangeList.Count)
-                        {
-                            var dc = _datacenterRangeList[index];
-                            if (dc.IpTo > ipv4Int)
-                            {
-                                ret.DataCenterName = dc.Name;
-                                ret.DataCenterHomePage = dc.HomePage;
-                                ret.DataCenterNameCode = dc.NameCode;
-                            }
-                        }
-                    }
+
                 }
                 else
                 {
@@ -218,6 +199,12 @@ namespace Udger.Parser.V3
             }
 
             return ret;
+        }
+
+        private DatacenterRange SearchIpv4(long ipv4Int)
+        {
+            lock(_datacenterRangeTree)
+                return _datacenterRangeTree.Query(ipv4Int).FirstOrDefault();
         }
 
         private static int[] Ip6ToArray(IPAddress addr)
@@ -387,7 +374,7 @@ namespace Udger.Parser.V3
             }
             return Tuple.Create<int, Match>(-1, null);
         }
-        
+
         private void PatchVersions(UaResult ret, Match lastPatternMatcher)
         {
             if (lastPatternMatcher != null)
@@ -407,7 +394,7 @@ namespace Udger.Parser.V3
                 ret.UaVersionMajor = "";
             }
         }
-        
+
         private ClientInfo ClientDetector(string uaString, UaResult ret)
         {
             var clientInfo = new ClientInfo();
@@ -517,7 +504,7 @@ namespace Udger.Parser.V3
                 }
             }
         }
-        
+
         private ImmutableList<IdRegString> PrepareRegexpStruct(DbConnection connection, string regexpTableName)
         {
             var ret = new List<IdRegString>();
@@ -731,6 +718,8 @@ namespace Udger.Parser.V3
             }
         }
 
+        private readonly Comparer<DatacenterRange> _datacenterRangeTreeComparer = Comparer<DatacenterRange>.Create((a, b) =>a.Range.CompareTo(b.Range));
+
         private void InitStaticStructures(DbConnection connection)
         {
             if (_clientRegstringList == null)
@@ -756,10 +745,11 @@ namespace Udger.Parser.V3
                         }
                     }
                 }
-                _datacenterRangeList = l.ToImmutableList();
+                // ReSharper disable once InconsistentlySynchronizedField
+                _datacenterRangeTree = new RangeTree<long, DatacenterRange>(l, _datacenterRangeTreeComparer);
             }
         }
-        
+
         private void Connect()
         {
             if (_connection != null) return;
